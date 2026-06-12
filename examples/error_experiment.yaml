@@ -1,0 +1,23 @@
+name: error-injection-root-endpoint
+description: >
+  Inject a 30% 503 error rate and confirm the service returns to a healthy
+  steady state once the fault is removed.
+
+target: http://127.0.0.1:8000
+
+steady_state:
+  url: /
+  samples: 30
+  expect_status: 200
+  min_success_rate: 0.99
+  max_p95_ms: 150
+
+fault:
+  type: error
+  error_rate: 0.30
+  error_status: 503
+
+schedule:
+  baseline_s: 2
+  fault_s: 4
+  recovery_s: 2

@@ -1,0 +1,2 @@
+[console_scripts]
+chaosforge = chaosforge.cli:main

@@ -1,0 +1,22 @@
+name: latency-injection-health-endpoint
+description: >
+  Validate that the service keeps a 99% success rate and recovers cleanly
+  after a 200ms latency fault is injected in front of /health.
+
+target: http://127.0.0.1:8000
+
+steady_state:
+  url: /health
+  samples: 30
+  expect_status: 200
+  min_success_rate: 0.99
+  max_p95_ms: 150
+
+fault:
+  type: latency
+  latency_ms: 200
+
+schedule:
+  baseline_s: 2
+  fault_s: 4
+  recovery_s: 2
