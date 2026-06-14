@@ -69,6 +69,26 @@ def _cmd_proxy(args: argparse.Namespace) -> int:
     return 0
 
 
+FAULT_CATALOG = {
+    "latency": "Add fixed latency (ms) to every proxied request (--latency-ms).",
+    "error": "Return HTTP 500 for a fraction of requests (--error-rate).",
+    "blackhole": "Drop a fraction of connections with no reply (--blackhole-rate).",
+    "cpu": "Saturate CPU cores for a duration (host fault: cpu_hog).",
+    "memory": "Allocate and hold memory to create pressure (host fault: memory_hog).",
+}
+
+
+def _cmd_list_faults(args: argparse.Namespace) -> int:
+    """List the fault types Chaos-Forge can inject."""
+    if getattr(args, "json", False):
+        import json
+        print(json.dumps(FAULT_CATALOG, indent=2))
+    else:
+        for name, desc in FAULT_CATALOG.items():
+            print(f"{name:10} {desc}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="chaosforge", description=__doc__)
     parser.add_argument("--version", action="version", version=f"chaos-forge {__version__}")
@@ -91,6 +111,10 @@ def build_parser() -> argparse.ArgumentParser:
     px.add_argument("--error-rate", type=float, default=0.0)
     px.add_argument("--blackhole-rate", type=float, default=0.0)
     px.set_defaults(func=_cmd_proxy)
+
+    lf = sub.add_parser("list-faults", help="list the fault types that can be injected")
+    lf.add_argument("--json", action="store_true", help="emit JSON instead of text")
+    lf.set_defaults(func=_cmd_list_faults)
 
     return parser
 
