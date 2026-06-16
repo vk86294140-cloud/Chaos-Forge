@@ -6,6 +6,7 @@ def test_list_faults_text(capsys):
     assert main(["list-faults"]) == 0
     out = capsys.readouterr().out
     assert "latency" in out and "blackhole" in out
+    assert "disk" in out
 
 
 def test_list_faults_json(capsys):

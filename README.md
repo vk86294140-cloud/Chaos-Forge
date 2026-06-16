@@ -41,6 +41,7 @@ state**, a **single turbulent variable**, a **bounded blast radius**, and an
 | `blackhole` | Drops a fraction of connections silently | client timeouts, hung-connection handling |
 | `cpu_hog` | Saturates N cores (context manager) | autoscaling, CPU-bound degradation |
 | `memory_hog` | Allocates and touches N MB | OOM behaviour, memory headroom |
+| `disk_hog` | Fills N MB of disk with a scratch file | log spew, full-disk handling, cache eviction |
 
 ## Install
 
