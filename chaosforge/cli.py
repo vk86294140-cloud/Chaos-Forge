@@ -75,6 +75,7 @@ FAULT_CATALOG = {
     "blackhole": "Drop a fraction of connections with no reply (--blackhole-rate).",
     "cpu": "Saturate CPU cores for a duration (host fault: cpu_hog).",
     "memory": "Allocate and hold memory to create pressure (host fault: memory_hog).",
+    "disk": "Fill disk with a scratch file to create pressure (host fault: disk_hog).",
 }
 
 
