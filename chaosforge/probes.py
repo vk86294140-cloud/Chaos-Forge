@@ -20,6 +20,10 @@ class ProbeResult:
     successes: int
     errors: int
     latencies_ms: List[float]
+    # Attempts that never produced an HTTP response (timeout, connection reset,
+    # blackholed socket). Counted separately because they are the signature of
+    # a hard failure rather than a slow-but-alive service.
+    transport_errors: int = 0
 
     @property
     def success_rate(self) -> float:
@@ -54,10 +58,17 @@ def probe(
     expect_status: int = 200,
     interval_s: float = 0.0,
 ) -> ProbeResult:
-    """Call `url` `samples` times and collect availability/latency stats."""
+    """Call `url` `samples` times and collect availability/latency stats.
+
+    Every attempt contributes a latency sample, including ones that never came
+    back with an HTTP response. A request that burns the full `timeout_s` and
+    then raises is a 5000ms experience for the caller; dropping it would make
+    the percentiles describe only the survivors.
+    """
 
     successes = 0
     errors = 0
+    transport_errors = 0
     latencies: List[float] = []
 
     for _ in range(samples):
@@ -66,23 +77,30 @@ def probe(
             with urllib.request.urlopen(url, timeout=timeout_s) as resp:
                 status = resp.status
                 resp.read()
-            elapsed_ms = (time.perf_counter() - start) * 1000.0
-            latencies.append(elapsed_ms)
+            latencies.append((time.perf_counter() - start) * 1000.0)
             if status == expect_status:
                 successes += 1
             else:
                 errors += 1
         except urllib.error.HTTPError as exc:
+            # An HTTP error is still a response, and can be the expected one
+            # (e.g. an experiment asserting a 503 fallback path).
             latencies.append((time.perf_counter() - start) * 1000.0)
-            errors += 1
             if exc.code == expect_status:
                 successes += 1
-                errors -= 1
+            else:
+                errors += 1
         except Exception:
+            latencies.append((time.perf_counter() - start) * 1000.0)
             errors += 1
+            transport_errors += 1
         if interval_s:
             time.sleep(interval_s)
 
     return ProbeResult(
-        samples=samples, successes=successes, errors=errors, latencies_ms=latencies
+        samples=samples,
+        successes=successes,
+        errors=errors,
+        latencies_ms=latencies,
+        transport_errors=transport_errors,
     )
