@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import yaml
 
@@ -53,7 +53,7 @@ class Experiment:
     description: str = ""
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Experiment":
+    def from_dict(cls, data: dict[str, Any]) -> Experiment:
         ss = data["steady_state"]
         fault = data["fault"]
         sched = data.get("schedule", {})
@@ -67,8 +67,8 @@ class Experiment:
         )
 
     @classmethod
-    def load(cls, path: str | Path) -> "Experiment":
-        with open(path, "r", encoding="utf-8") as fh:
+    def load(cls, path: str | Path) -> Experiment:
+        with open(path, encoding="utf-8") as fh:
             return cls.from_dict(yaml.safe_load(fh))
 
 
@@ -90,7 +90,7 @@ class ExperimentResult:
     recovery: WindowReport
     findings: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "experiment": self.experiment,
             "passed": self.passed,

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import time
-
 from chaosforge.probes import probe
 from chaosforge.proxy import FaultProxy
 
@@ -23,7 +21,7 @@ def test_latency_fault_adds_delay(target_server):
         recovered = probe(proxy.base_url + "/health", samples=5)
 
     assert slow.mean_ms >= clean.mean_ms + 100  # ~150ms injected
-    assert recovered.mean_ms < slow.mean_ms      # delay removed on disarm
+    assert recovered.mean_ms < slow.mean_ms  # delay removed on disarm
 
 
 def test_error_fault_drops_success_rate(target_server):

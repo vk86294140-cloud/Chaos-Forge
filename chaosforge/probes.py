@@ -11,7 +11,6 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from typing import List
 
 
 @dataclass
@@ -19,7 +18,7 @@ class ProbeResult:
     samples: int
     successes: int
     errors: int
-    latencies_ms: List[float]
+    latencies_ms: list[float]
     # Attempts that never produced an HTTP response (timeout, connection reset,
     # blackholed socket). Counted separately because they are the signature of
     # a hard failure rather than a slow-but-alive service.
@@ -77,7 +76,7 @@ def probe(
     successes = 0
     errors = 0
     transport_errors = 0
-    latencies: List[float] = []
+    latencies: list[float] = []
 
     slot_s = (window_s / samples) if (window_s and samples) else 0.0
     window_start = time.perf_counter()

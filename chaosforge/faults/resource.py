@@ -12,8 +12,8 @@ import os
 import tempfile
 import threading
 import time
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 
 @contextlib.contextmanager
@@ -61,7 +61,7 @@ def memory_hog(megabytes: int = 256, duration_s: float | None = None) -> Iterato
 def disk_hog(
     megabytes: int = 256,
     duration_s: float | None = None,
-    path: str | os.PathLike | None = None,
+    path: str | os.PathLike[str] | None = None,
 ) -> Iterator[Path]:
     """Consume `megabytes` of disk by writing a scratch file until the context
     exits, then delete it. Simulates a full or filling disk (log spew, runaway

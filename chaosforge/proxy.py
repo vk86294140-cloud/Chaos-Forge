@@ -16,9 +16,9 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from contextlib import suppress
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Optional
 
 
 @dataclass
@@ -36,7 +36,7 @@ class FaultConfig:
     enabled: bool = False
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
-    def arm(self, **kwargs) -> None:
+    def arm(self, **kwargs: float | int | bool) -> None:
         with self._lock:
             for key, value in kwargs.items():
                 setattr(self, key, value)
@@ -49,7 +49,7 @@ class FaultConfig:
             self.blackhole_rate = 0.0
             self.enabled = False
 
-    def snapshot(self) -> "FaultConfig":
+    def snapshot(self) -> FaultConfig:
         with self._lock:
             return FaultConfig(
                 latency_ms=self.latency_ms,
@@ -66,7 +66,7 @@ class _ProxyHandler(BaseHTTPRequestHandler):
     fault: FaultConfig = FaultConfig()
     protocol_version = "HTTP/1.1"
 
-    def log_message(self, *args) -> None:  # silence default stderr logging
+    def log_message(self, *args: object) -> None:  # silence default stderr logging
         pass
 
     def _handle(self) -> None:
@@ -74,11 +74,13 @@ class _ProxyHandler(BaseHTTPRequestHandler):
 
         if cfg.enabled:
             if cfg.blackhole_rate and random.random() < cfg.blackhole_rate:
-                # Drop the connection without responding.
-                try:
+                # Drop the connection without responding. close_connection stops
+                # BaseHTTPRequestHandler from trying to serve another request on
+                # a socket we just tore down.
+                self.close_connection = True
+                with suppress(OSError):
                     self.connection.close()
-                finally:
-                    return
+                return
             if cfg.latency_ms:
                 time.sleep(cfg.latency_ms / 1000.0)
             if cfg.error_rate and random.random() < cfg.error_rate:
@@ -150,7 +152,7 @@ class FaultProxy:
             {"target_base": target_base, "fault": self.fault},
         )
         self._server = ThreadingHTTPServer((host, port), handler)
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
 
     @property
     def port(self) -> int:
@@ -160,7 +162,7 @@ class FaultProxy:
     def base_url(self) -> str:
         return f"http://{self.host}:{self.port}"
 
-    def start(self) -> "FaultProxy":
+    def start(self) -> FaultProxy:
         self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
         self._thread.start()
         return self
@@ -171,8 +173,8 @@ class FaultProxy:
         if self._thread:
             self._thread.join(timeout=5)
 
-    def __enter__(self) -> "FaultProxy":
+    def __enter__(self) -> FaultProxy:
         return self.start()
 
-    def __exit__(self, *exc) -> None:
+    def __exit__(self, *exc: object) -> None:
         self.stop()

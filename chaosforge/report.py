@@ -23,8 +23,7 @@ def to_markdown(result: ExperimentResult) -> str:
     ]
     for w in (result.baseline, result.fault, result.recovery):
         lines.append(
-            f"| {w.label} | {w.success_rate:.0%} | {w.p50_ms:.0f} | "
-            f"{w.p95_ms:.0f} | {w.samples} |"
+            f"| {w.label} | {w.success_rate:.0%} | {w.p50_ms:.0f} | {w.p95_ms:.0f} | {w.samples} |"
         )
     lines.append("")
     if result.findings:
@@ -46,14 +45,12 @@ def to_console(result: ExperimentResult) -> str:
     out.append(header)
     out.append("-" * len(header))
     for w in (result.baseline, result.fault, result.recovery):
-        out.append(
-            f"{w.label:<10}{w.success_rate * 100:>9.0f}%{w.p50_ms:>10.0f}{w.p95_ms:>10.0f}"
-        )
+        out.append(f"{w.label:<10}{w.success_rate * 100:>9.0f}%{w.p50_ms:>10.0f}{w.p95_ms:>10.0f}")
     out.append("")
     if result.findings:
         out.append("Findings:")
         for f in result.findings:
             out.append(f"  - {f}")
     else:
-        out.append("Findings: none — steady state held.")
+        out.append("Findings: none - steady state held.")
     return "\n".join(out)

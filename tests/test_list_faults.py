@@ -1,5 +1,6 @@
 """Tests for the list-faults CLI command."""
-from chaosforge.cli import main, FAULT_CATALOG
+
+from chaosforge.cli import FAULT_CATALOG, main
 
 
 def test_list_faults_text(capsys):
@@ -11,6 +12,7 @@ def test_list_faults_text(capsys):
 
 def test_list_faults_json(capsys):
     import json
+
     assert main(["list-faults", "--json"]) == 0
     data = json.loads(capsys.readouterr().out)
     assert set(data) == set(FAULT_CATALOG)

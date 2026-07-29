@@ -83,6 +83,7 @@ def _cmd_list_faults(args: argparse.Namespace) -> int:
     """List the fault types Chaos-Forge can inject."""
     if getattr(args, "json", False):
         import json
+
         print(json.dumps(FAULT_CATALOG, indent=2))
     else:
         for name, desc in FAULT_CATALOG.items():
@@ -123,7 +124,8 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    return args.func(args)
+    exit_code: int = args.func(args)
+    return exit_code
 
 
 if __name__ == "__main__":

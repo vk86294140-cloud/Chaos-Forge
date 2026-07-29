@@ -25,11 +25,10 @@ def test_disk_hog_creates_then_removes_file(tmp_path):
 
 def test_disk_hog_cleans_up_on_exception(tmp_path):
     captured: Path | None = None
-    with pytest.raises(RuntimeError):
-        with disk_hog(megabytes=1, path=tmp_path) as scratch:
-            captured = scratch
-            assert scratch.exists()
-            raise RuntimeError("boom")
+    with pytest.raises(RuntimeError), disk_hog(megabytes=1, path=tmp_path) as scratch:
+        captured = scratch
+        assert scratch.exists()
+        raise RuntimeError("boom")
     assert captured is not None and not captured.exists()
 
 
