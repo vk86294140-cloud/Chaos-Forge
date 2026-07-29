@@ -37,16 +37,29 @@ def run_experiment(experiment: Experiment) -> ExperimentResult:
     """
 
     ss = experiment.steady_state
+    sched = experiment.schedule
     with FaultProxy(target_base=experiment.target) as proxy:
         probe_url = proxy.base_url + _path_of(ss.url)
 
-        baseline = probe(probe_url, samples=ss.samples, expect_status=ss.expect_status)
+        def observe(window_s: float) -> ProbeResult:
+            return probe(
+                probe_url,
+                samples=ss.samples,
+                expect_status=ss.expect_status,
+                window_s=window_s,
+            )
+
+        baseline = observe(sched.baseline_s)
 
         _arm_fault(proxy, experiment)
-        fault = probe(probe_url, samples=ss.samples, expect_status=ss.expect_status)
+        fault = observe(sched.fault_s)
         proxy.fault.disarm()
 
-        recovery = probe(probe_url, samples=ss.samples, expect_status=ss.expect_status)
+        # Recovery is measured over its own window rather than immediately on
+        # disarm. A system with a circuit breaker or a backoff timer is still
+        # shedding load the instant the fault stops; probing it right away
+        # scores the breaker's cooldown as a failure to recover.
+        recovery = observe(sched.recovery_s)
 
     findings: list[str] = []
 

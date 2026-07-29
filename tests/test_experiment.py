@@ -41,6 +41,29 @@ def test_error_fault_reports_no_tolerance(target_server):
     assert any("No fault tolerance" in f for f in result.findings)
 
 
+def test_schedule_controls_how_long_each_window_runs(target_server):
+    """The schedule block used to be parsed and then ignored entirely.
+
+    Windows were paced only by how fast the probes returned, so `baseline_s`,
+    `fault_s` and `recovery_s` had no effect on the run and the recovery window
+    started the instant the fault was disarmed.
+    """
+    import time
+
+    exp = _make_experiment(target_server, {"type": "latency", "latency_ms": 5})
+    exp.steady_state.samples = 4
+    exp.schedule.baseline_s = 1.0
+    exp.schedule.fault_s = 1.0
+    exp.schedule.recovery_s = 1.0
+
+    start = time.perf_counter()
+    run_experiment(exp)
+    elapsed = time.perf_counter() - start
+
+    # Three one-second windows cannot complete in appreciably less than 3s.
+    assert elapsed >= 2.7, f"windows finished too fast ({elapsed:.2f}s)"
+
+
 def test_experiment_from_yaml(tmp_path, target_server):
     yaml_text = f"""
 name: yaml-exp
