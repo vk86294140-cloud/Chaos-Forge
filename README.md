@@ -31,6 +31,10 @@ state**, a **single turbulent variable**, a **bounded blast radius**, and an
   hypothesis fails.
 - **Always reversible.** Faults are armed and disarmed at runtime; resource
   faults are context managers that always clean up.
+- **Finds the threshold, not just the verdict.** `chaosforge break` bisects the
+  fault magnitude to report what the service actually tolerates — a number you
+  can budget against and regress on. See
+  [Finding the breaking point](#finding-the-breaking-point).
 
 ## Faults supported
 
@@ -109,6 +113,46 @@ Validate before running:
 chaosforge validate examples/latency_experiment.yaml
 ```
 
+## Finding the breaking point
+
+`chaosforge run` answers yes/no: did the system survive *this* fault? That is
+the right question when you already know the number you care about. Often you
+don't — and the useful output is the threshold itself:
+
+```bash
+chaosforge break examples/latency_experiment.yaml
+```
+
+```
+Breaking point: latency-injection-health-endpoint  (fault: latency)
+
+   magnitude    held   success    p95 ms
+--------------------------------------------
+     2000.00      no      100%      2003
+     1000.00      no      100%      1002
+      500.00      no      100%       502
+      250.00      no      100%       252
+      125.00     yes      100%       127
+
+Tolerates up to 125.00 ms; breaks at 250.00 ms.
+```
+
+That number is a budget: it says how much headroom a dependency has before it
+takes you down with it. It is also a regression test — if the same search
+returns 40ms next month, something got more fragile:
+
+```bash
+chaosforge break experiment.yaml --min-tolerated 100   # exit 1 if tolerance dropped
+```
+
+The search is a binary search rather than a linear ramp because every trial
+costs a real observation window: sweeping 0–1000ms in 50ms steps is 20 windows,
+while bisection reaches the same resolution in about five. It probes the
+ceiling first, so a service that shrugs off the worst case costs one window
+instead of eight. Works on the proxy-injected faults (`latency`, `error`,
+`blackhole`); host-level resource faults are rejected with a message rather
+than silently ignored.
+
 ## Use the proxy standalone
 
 Put a degraded version of any service in front of your client for manual or
@@ -148,8 +192,9 @@ chaosforge/
   probes.py       steady-state probe + p50/p95 statistics
   experiment.py   YAML experiment + result models
   runner.py       baseline -> fault -> recovery orchestration + verdict
+  breaking_point.py  binary search for the magnitude that breaks steady state
   report.py       text / Markdown / JSON reporters
-  cli.py          chaosforge run | validate | proxy
+  cli.py          chaosforge run | break | validate | proxy | list-faults
   faults/         host-level faults (cpu_hog, memory_hog)
 examples/         demo target + ready-to-run experiments
 tests/            pytest suite (real in-process target, no mocks)

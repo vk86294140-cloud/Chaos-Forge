@@ -13,9 +13,16 @@ import sys
 import time
 
 from . import __version__
+from .breaking_point import find_breaking_point
 from .experiment import Experiment
 from .proxy import FaultProxy
-from .report import to_console, to_json, to_markdown
+from .report import (
+    breaking_point_to_console,
+    breaking_point_to_json,
+    to_console,
+    to_json,
+    to_markdown,
+)
 from .runner import run_experiment
 
 
@@ -34,6 +41,30 @@ def _cmd_run(args: argparse.Namespace) -> int:
         print(f"\nMarkdown report written to {args.md}", file=sys.stderr)
 
     return 0 if result.passed else 1
+
+
+def _cmd_break(args: argparse.Namespace) -> int:
+    """Find the fault magnitude at which the steady state stops holding."""
+    experiment = Experiment.load(args.file)
+    result = find_breaking_point(
+        experiment,
+        max_magnitude=args.max,
+        max_trials=args.max_trials,
+        window_s=args.window,
+    )
+
+    if args.json:
+        print(breaking_point_to_json(result))
+    else:
+        print(breaking_point_to_console(result))
+
+    # Exit non-zero when tolerance is below the floor the caller declared, so
+    # this can gate a pipeline the same way `run` does.
+    if args.min_tolerated is not None:
+        tolerated = result.tolerated or 0.0
+        if tolerated < args.min_tolerated:
+            return 1
+    return 0
 
 
 def _cmd_validate(args: argparse.Namespace) -> int:
@@ -101,6 +132,21 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--json", action="store_true", help="emit JSON instead of text")
     run.add_argument("--md", metavar="PATH", help="also write a Markdown report")
     run.set_defaults(func=_cmd_run)
+
+    brk = sub.add_parser(
+        "break", help="binary-search the fault magnitude the service stops tolerating"
+    )
+    brk.add_argument("file")
+    brk.add_argument("--max", type=float, help="upper bound to search (default: per-fault)")
+    brk.add_argument("--max-trials", type=int, default=8, help="observation windows to spend")
+    brk.add_argument("--window", type=float, help="seconds per trial (default: schedule.fault_s)")
+    brk.add_argument(
+        "--min-tolerated",
+        type=float,
+        help="exit non-zero if tolerance falls below this (CI regression gate)",
+    )
+    brk.add_argument("--json", action="store_true", help="emit JSON instead of text")
+    brk.set_defaults(func=_cmd_break)
 
     val = sub.add_parser("validate", help="validate an experiment file")
     val.add_argument("file")

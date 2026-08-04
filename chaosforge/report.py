@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+from .breaking_point import BreakingPoint
 from .experiment import ExperimentResult
 
 
@@ -53,4 +54,39 @@ def to_console(result: ExperimentResult) -> str:
             out.append(f"  - {f}")
     else:
         out.append("Findings: none - steady state held.")
+    return "\n".join(out)
+
+
+def breaking_point_to_json(result: BreakingPoint, indent: int = 2) -> str:
+    return json.dumps(result.to_dict(), indent=indent)
+
+
+def breaking_point_to_console(result: BreakingPoint) -> str:
+    """Plain console summary of a breaking-point search."""
+    out = [f"Breaking point: {result.experiment}  (fault: {result.fault_type})", ""]
+    header = f"{'magnitude':>12}{'held':>8}{'success':>10}{'p95 ms':>10}"
+    out.append(header)
+    out.append("-" * len(header))
+    for trial in result.trials:
+        out.append(
+            f"{trial.magnitude:>12.2f}{'yes' if trial.held else 'no':>8}"
+            f"{trial.success_rate * 100:>9.0f}%{trial.p95_ms:>10.0f}"
+        )
+    out.append("")
+
+    if not result.found:
+        out.append(
+            f"No breaking point found up to {result.tolerated:.2f} {result.unit} - "
+            f"the service held everything tested. Raise --max to search further."
+        )
+    elif result.tolerated is None:
+        out.append(
+            f"Broke at the smallest magnitude tested ({result.breaks_at:.2f} {result.unit}). "
+            f"There is no tolerance budget here."
+        )
+    else:
+        out.append(
+            f"Tolerates up to {result.tolerated:.2f} {result.unit}; "
+            f"breaks at {result.breaks_at:.2f} {result.unit}."
+        )
     return "\n".join(out)
